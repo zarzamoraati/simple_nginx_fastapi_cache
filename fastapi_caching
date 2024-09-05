@@ -1,0 +1,34 @@
+## Set up NGINX as a caching service
+
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=fastapi_cache:10m max_size=1g inactive=60m use_temp_path=off;
+
+server {
+    listen 8081;
+    server_name 192.168.100.209;
+
+    location /contacts {
+        # Enable caching for this location
+        proxy_cache fastapi_cache;
+	
+	# Ignore cache rules from client
+
+	proxy_ignore_headers Cache-Control;
+	# Cache only GET requests
+        proxy_cache_methods GET;
+
+        # Cache duration for responses
+        proxy_cache_valid 200 302 1m;
+        proxy_cache_valid 404 1m;
+
+        # Add cache status to response headers
+        add_header X-Cache-Status $upstream_cache_status;
+
+        # Pass to backend
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
